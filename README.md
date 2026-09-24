@@ -45,4 +45,4 @@ Este projeto é uma recriação moderna do clássico jogo *Pong*. A aplicação 
 
 1. **Clone o repositório:**
    ```bash
-   git clone [https://github.com/WeslleyA/NOME-DO-SEU-REPOSITORIO.git](https://github.com/WeslleyA/NOME-DO-SEU-REPOSITORIO.git)
+   git clone [https://github.com/WeslleyA/ping-pong.git](https://github.com/WeslleyA/ping-pong.git)
