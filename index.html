@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        *{
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+        
+    </style>
+</head>     
+<body>
+    <canvas></canvas>
+    <script>
+        const canvasEl = document.querySelector("canvas"),
+              canvasCtx = canvasEl.getContext("2d"),
+              gapX = 10,
+              lineWidth = 10;
+        // VARIÁVEIS DE ESTADO E REGRA 
+        let isTwoPlayers = false; // false = vs IA | true = 2 Jogadores
+        let isGameOver = false;   // Guarda se a partida terminou
+        let winner = "";          // Guarda o nome do vencedor
+        const winningScore = 10;  // Quantidade de pontos para vencer
+        
+
+        
+
+        const field = {
+            w: window.innerWidth,
+            h: window.innerHeight,
+            draw() {
+                canvasCtx.fillStyle = "#286047";
+                canvasCtx.fillRect(0, 0, this.w, this.h);
+            }
+        };
+
+        const line = {
+            w: lineWidth,
+            h: field.h,
+            draw() {
+                canvasCtx.fillStyle = "#ffffff";
+                canvasCtx.fillRect(canvasEl.width / 2 - this.w / 2, 0, this.w, this.h);
+            }
+        };
+
+        const score ={
+            left: 0,
+            right: 0,
+            draw(){
+                //Desenhar os pontos no topo
+                canvasCtx.font = "bold 50px sans-serif";
+                canvasCtx.textAlign = "center";
+                canvasCtx.fillStyle = "#ffffff";
+                // Ponto do jogador esquerdo
+                canvasCtx.fillText(this.left, field.w / 4, 70);
+                // Ponto do jogador direito
+                canvasCtx.fillText(this.right, (field.w / 4) * 3, 70);
+
+                // Desenha a indicação do modo no rodapé
+                canvasCtx.font = "16px sans-serif";
+                const modeText = isTwoPlayers 
+                    ? "Modo: 2 Jogadores (Setas) | Tecle [1] para vs IA" 
+                    : "Modo: 1 Jogador (vs IA) | Tecle [2] para 2 Jogadores";
+                canvasCtx.fillText(modeText, field.w / 3, field.h - 30);
+
+                //Se o jogo acabou, desenha a tela de Vitória
+                if (isGameOver){
+                    //Fundo semi-transparente para dar destaque á mensagem
+                    canvasCtx.fillStyle = "rgba(0,0,0, 0.7)";
+                    canvasCtx.fillRect(0,0, field.w, field.h);
+
+                    //Texto do Vencedor
+                    canvasCtx.font = "bold 48px sans-serif"
+                    canvasCtx.fillStyle = "#ffd700"; 
+                    canvasCtx.fillText(`🏆 ${winner} Venceu! 🏆`, field.w / 2, field.h / 2 - 20);
+
+                    //Instrução para Reiniciar
+                    canvasCtx.font ="22px sans-serif";
+                    canvasCtx.fillStyle = "#ffffff";
+                    canvasCtx.fillText("Pressione [ESPAÇO] ou [R] para jogar novamente", field.w / 2, field.h / 2 + 40);
+                }
+            }
+        };
+
+        const leftPaddle = {
+            x: gapX,
+            y: field.h / 2 - 100,
+            w: line.w,
+            h: 200,
+            speed: 8,
+            draw() {
+                canvasCtx.fillStyle = "#ffffff";
+                canvasCtx.fillRect(this.x, this.y, this.w, this.h);
+            },
+            move(dir) {
+                this.y += dir * this.speed;
+
+                if (this.y < 0) this.y = 0;
+                if (this.y + this.h > field.h) this.y = field.h - this.h;
+            }
+        };
+
+        const rightPaddle = {
+            x: field.w - line.w - gapX,
+            y: field.h / 2 - 100,
+            w: line.w,
+            h: 200,
+            speed: 8,
+            draw() {
+                canvasCtx.fillStyle = "#ffffff";
+                canvasCtx.fillRect(this.x, this.y, this.w, this.h);
+            },
+            move(dir) {
+                this.y += dir * this.speed;
+
+                if (this.y < 0) this.y = 0;
+                if (this.y + this.h > field.h) this.y = field.h - this.h;
+            },
+            autoMove() {
+                const paddleCenter = this.y + this.h / 2;
+                const margin = 10;
+                if (paddleCenter < ball.y - margin) {
+                    this.move(1);
+                } else if (paddleCenter > ball.y + margin) {
+                    this.move(-1);
+                }
+            }
+        };
+
+        const ball = {
+            x: field.w / 2,
+            y: field.h / 2,
+            r: 12,
+            baseSpeed: 7,
+            speedX: 7,
+            speedY: 7,
+            maxSpeed: 18,
+            draw() {
+                canvasCtx.fillStyle = "#ffffff";
+                canvasCtx.beginPath();
+                canvasCtx.arc(this.x, this.y, this.r, 0, 2 * Math.PI, false);
+                canvasCtx.fill();
+            },
+            //Aumenta em 5% cada rebate
+            speedUp() {
+                if (Math.abs(this.speedX) < this.maxSpeed) {
+                    this.speedX *= 1.05;
+                    this.speedY *= 1.05;
+                }
+
+            },
+
+            // Reseta a bola no centro e restaura a velocidade inicial
+            reset(){
+                this.x = field.w /2;
+                this.y = field.h /2;
+                this.speedX = (this.speedX > 0 ? -1 : 1)* this.baseSpeed;
+                this.speedY = (Math.random() > 0.5 ? 1 : -1)* this.baseSpeed;
+            },
+
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                // Quique no teto e no chão
+                if (this.y - this.r < 0 || this.y + this.r > field.h) {
+                    this.speedY *= -1;
+                }
+
+                const collidesWith = (paddle) => (
+                    this.x + this.r > paddle.x &&
+                    this.x - this.r < paddle.x + paddle.w &&
+                    this.y + this.r > paddle.y &&
+                    this.y - this.r < paddle.y + paddle.h
+                );
+                // Colisão com Raquete Esquerda
+                if (collidesWith(leftPaddle)) {
+                    this.x = leftPaddle.x + leftPaddle.w + this.r;
+                    this.speedX = Math.abs(this.speedX);
+                    this.speedUp();
+                }
+                // Colisão com Raquete Direita
+                if (collidesWith(rightPaddle)) {
+                    this.x = rightPaddle.x - this.r;
+                    this.speedX = -Math.abs(this.speedX);
+                    this.speedUp();
+                }
+                // --- VERIFICAÇÃO DE PONTO E VITÓRIA ---
+                // Ponto da Direita (bola saiu pela esquerda)
+                if (this.x + this.r < 0) {
+                    score.right++;
+                    if (score.right >= winningScore){
+                        isGameOver = true;
+                        winner = isTwoPlayers ? "jogador 2" : "IA";
+                    } else { this.reset()}
+                } 
+                // Ponto da Esquerda (bola saiu pela direita)
+                else if (this.x - this.r > field.w) {
+                    score.left++;
+                    if (score.left >= winningScore){
+                        isGameOver = true;
+                        winner = "jogador 1"
+                    }else{
+                    this.reset();
+                    }
+                }
+                
+            }
+        };
+            const pressedKeys = {
+            w:false,
+            s:false,
+            ArrowUp:false,
+            ArrowDown:false
+        };
+
+        // --- FUNÇÃO PARA REINICIAR A PARTIDA COMPLETA ---
+        function resetGame(){
+            score.left = 0;
+            score.right = 0;
+            isGameOver = false;
+            winner = "";
+            ball.reset();
+            leftPaddle.y = field.h / 2 - leftPaddle.h / 2;
+            rightPaddle.y = field.h / 2 - rightPaddle.h / 2;
+        }
+
+
+        function setup() {
+            canvasEl.width = window.innerWidth;
+            canvasEl.height = window.innerHeight;
+            field.w = window.innerWidth;
+            field.h = window.innerHeight;
+            line.h = field.h;
+            rightPaddle.x = field.w - rightPaddle.w - gapX;
+            resetGame();
+        }
+
+        function handleInput() {
+            // Controle do jogador esquerdo - Teclas W e S
+            if (pressedKeys.w) leftPaddle.move(-1);
+            if (pressedKeys.s) leftPaddle.move(1);
+            
+            // Controle do jogador direito - Teclas ArrowUp e ArrowDown
+            if (isTwoPlayers) {
+                // Modo de dois jogadores - Raquete direita controlada pelo jogador
+                if (pressedKeys.ArrowUp) rightPaddle.move(-1);
+                if (pressedKeys.ArrowDown) rightPaddle.move(1);
+            } else {
+                // Modo de um jogador - Raquete direita se move automaticamente
+                rightPaddle.autoMove();
+            }
+        }
+
+        function draw() {
+            field.draw();
+            line.draw();
+            leftPaddle.draw();
+            rightPaddle.draw();
+            ball.draw();
+            score.draw(); // O score.draw() agora desenha o placar e a tela de Game Over por cima
+        }
+
+        function update() {
+            // Apenas atualiza o movimento se o jogo NÃO tiver acabado
+            if (!isGameOver) {
+            handleInput();
+            ball.update();
+            }
+            draw();
+            requestAnimationFrame(update);
+        }
+        // --- MANIPULAÇÃO DE TECLAS ---
+        window.addEventListener("keydown", (event) => {
+            //se for das teclas do jogo (w,s, setas), marca como true
+            if (event.key in pressedKeys) {
+                pressedKeys[event.key] = true;
+            }
+            // Alternar para Modo 1 Jogador e reiniciar partida
+            if (event.key === "1") {
+                if (isTwoPlayers !== false) {
+                    isTwoPlayers = false;
+                    resetGame();
+                }
+            }
+            // Alternar para Modo 2 Jogadores e reiniciar partida
+            if (event.key === "2") {
+                if (isTwoPlayers !== true) {
+                    isTwoPlayers = true;
+                    resetGame();
+                }
+            }
+           // Tecla para reiniciar quando der Game Over (Espaço ou R)
+            if (event.code === "Space" || event.key === "r" || event.key === "R") {
+                if (isGameOver) {
+                    resetGame();
+                }
+            }
+        });
+
+        window.addEventListener("keyup", (event) => {
+            if (event.key in pressedKeys) {
+                pressedKeys[event.key] = false;
+            }
+        });
+
+        window.addEventListener("resize", setup);
+
+        setup();
+        update();
+        setInterval(() => {
+            console.log(`Left Paddle Y: ${leftPaddle.y}, Right Paddle Y: ${rightPaddle.y}`);
+        }, 1000);
+    </script>
+</body>
+</html>
